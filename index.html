@@ -484,7 +484,7 @@
             // Definición de la clase Player
             function Player(pos) {
                 this.pos = pos.plus(new Vector(0, -0.5));
-                this.size = new Vector(0.8, 1.8); // Ajustado para que se vea completo el sprite
+                this.size = new Vector(0.8, 1.8); // Tamaño fijo del jugador
                 this.pos = pos.plus(new Vector(0, -(this.size.y - 1))); // Ajuste dinámico para no atravesar el suelo
                 this.speed = new Vector(0, 0);
                 this.facing = 'right'; // Dirección a la que mira el jugador
@@ -498,7 +498,7 @@
             // Definición de la clase Lava
             function Lava(pos, ch) {
                 this.pos = pos;
-                this.size = new Vector(0.8, 1.8);
+                this.size = new Vector(1, 1);
                 if (ch === '=') this.speed = new Vector(2, 0);
                 else if (ch === '|') this.speed = new Vector(0, 2);
                 else if (ch === 'v') {
