@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trlava</title>
+    <link rel="manifest" href="manifest.json">
     <style>
         * {
             margin: 0;
@@ -994,6 +995,19 @@
                 document.getElementById('instructions').style.opacity = '0.3';
             }, 5000);
         }
+
+
     </script>
+
+    <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log("SW registrado:", reg))
+          .catch(err => console.error("Error SW:", err));
+      });
+    }
+  </script>
+
 </body>
 </html>
