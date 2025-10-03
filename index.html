@@ -224,13 +224,31 @@
         #fullscreen-btn:hover {
             background: rgba(0, 0, 0, 0.7);
         }
+        
+        /* Notificación de cambio de nivel */
+        #level-notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 30px;
+            border-radius: 10px;
+            z-index: 1000;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
     <div id="game-wrapper">
         <div id="game-container">
             <div id="level-info">Nivel 1</div>
-            <div id="instructions">Controles: A (izq) - D (der) - W/ESPACIO (saltar)</div>
+            <div id="instructions">Controles: A (izq) - D (der) - W/ESPACIO (saltar) | 1-5: Cambiar nivel</div>
             <div id="loading">Cargando juego...</div>
             <button id="fullscreen-btn">Pantalla Completa</button>
             
@@ -246,6 +264,7 @@
             </div>
             
             <div class="touch-indicator" id="touch-indicator">Toque para comenzar</div>
+            <div id="level-notification">Nivel 1</div>
         </div>
     </div>
 
@@ -476,6 +495,28 @@
 
         ];
 
+        // Variables globales para controlar el juego
+        var currentLevel = 0;
+        var currentLevelInstance = null;
+        var currentDisplay = null;
+        var currentAnimation = null;
+        var gameRunning = false;
+
+        // Sistema de teclas simplificado
+        var pressedKeys = {
+            left: false,
+            right: false,
+            up: false,
+            space: false
+        };
+        
+        // Estado de los controles táctiles
+        var touchControlsState = {
+            left: false,
+            right: false,
+            space: false
+        };
+
         function initGame() {
             // Ocultar indicador táctil al comenzar
             document.getElementById('touch-indicator').style.display = 'none';
@@ -491,6 +532,75 @@
                     elem.msRequestFullscreen();
                 }
             });
+            
+            // Configurar eventos de teclado para cambiar niveles
+            document.addEventListener('keydown', function(event) {
+                // Teclas 1-5 para cambiar niveles
+                if (event.key >= '1' && event.key <= '5') {
+                    var levelNumber = parseInt(event.key) - 1;
+                    if (levelNumber < LEVELS.length) {
+                        changeLevel(levelNumber);
+                    }
+                }
+                
+                // Controles del juego
+                if (event.key === 'a' || event.key === 'A' || event.key === 'ArrowLeft') {
+                    pressedKeys.left = true;
+                }
+                if (event.key === 'd' || event.key === 'D' || event.key === 'ArrowRight') {
+                    pressedKeys.right = true;
+                }
+                if (event.key === 'w' || event.key === 'W' || event.key === 'ArrowUp' || event.key === ' ') {
+                    pressedKeys.up = true;
+                    pressedKeys.space = true;
+                }
+            });
+            
+            document.addEventListener('keyup', function(event) {
+                if (event.key === 'a' || event.key === 'A' || event.key === 'ArrowLeft') {
+                    pressedKeys.left = false;
+                }
+                if (event.key === 'd' || event.key === 'D' || event.key === 'ArrowRight') {
+                    pressedKeys.right = false;
+                }
+                if (event.key === 'w' || event.key === 'W' || event.key === 'ArrowUp' || event.key === ' ') {
+                    pressedKeys.up = false;
+                    pressedKeys.space = false;
+                }
+            });
+            
+            // Configurar controles táctiles
+            if (isTouchDevice) {
+                document.getElementById('left-btn').addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    touchControlsState.left = true;
+                });
+                
+                document.getElementById('left-btn').addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    touchControlsState.left = false;
+                });
+                
+                document.getElementById('right-btn').addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    touchControlsState.right = true;
+                });
+                
+                document.getElementById('right-btn').addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    touchControlsState.right = false;
+                });
+                
+                document.getElementById('jump-btn').addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    touchControlsState.space = true;
+                });
+                
+                document.getElementById('jump-btn').addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    touchControlsState.space = false;
+                });
+            }
             
             // Clase Vector para manejar posiciones y movimientos
             function Vector(x, y) {
@@ -875,85 +985,6 @@
                 this.wrap.parentNode.removeChild(this.wrap);
             };
 
-            // Seguimiento de teclas (W, A, D, espacio)
-            var keyCodes = { 
-                65: 'left',   // A
-                68: 'right',  // D
-                87: 'up',     // W
-                32: 'space'   // Espacio
-            };
-            
-            // Estado de los controles
-            var pressedKeys = {
-                left: false,
-                right: false,
-                up: false,
-                space: false
-            };
-            
-            // Estado de los controles táctiles
-            var touchControlsState = {
-                left: false,
-                right: false,
-                space: false
-            };
-            
-            function trackKeys() {
-                function handler(event) {
-                    if (keyCodes.hasOwnProperty(event.keyCode)) {
-                        var down = event.type == 'keydown';
-                        pressedKeys[keyCodes[event.keyCode]] = down;
-                        event.preventDefault();
-                    }
-                }
-                
-                // Registrar eventos de teclado
-                addEventListener('keydown', handler);
-                addEventListener('keyup', handler);
-                
-                return pressedKeys;
-            }
-
-            // Configurar eventos táctiles
-            if (isTouchDevice) {
-                document.getElementById('left-btn').addEventListener('touchstart', function(e) {
-                    e.preventDefault();
-                    touchControlsState.left = true;
-                });
-                
-                document.getElementById('left-btn').addEventListener('touchend', function(e) {
-                    e.preventDefault();
-                    touchControlsState.left = false;
-                });
-                
-                document.getElementById('right-btn').addEventListener('touchstart', function(e) {
-                    e.preventDefault();
-                    touchControlsState.right = true;
-                });
-                
-                document.getElementById('right-btn').addEventListener('touchend', function(e) {
-                    e.preventDefault();
-                    touchControlsState.right = false;
-                });
-                
-                document.getElementById('jump-btn').addEventListener('touchstart', function(e) {
-                    e.preventDefault();
-                    touchControlsState.space = true;
-                });
-                
-                document.getElementById('jump-btn').addEventListener('touchend', function(e) {
-                    e.preventDefault();
-                    touchControlsState.space = false;
-                });
-                
-                // Prevenir desplazamiento en dispositivos táctiles
-                document.addEventListener('touchmove', function(e) {
-                    if (e.touches.length > 1) {
-                        e.preventDefault();
-                    }
-                }, { passive: false });
-            }
-
             // Ejecutar animación
             function runAnimation(frameFunc) {
                 var lastTime = null;
@@ -973,7 +1004,7 @@
             // Ejecutar un nivel
             function runLevel(level, Display, andThen) {
                 var display = new Display(document.getElementById('game-container'), level);
-                var arrows = trackKeys();
+                currentDisplay = display;
                 
                 runAnimation(function (step) {
                     // Combinar controles de teclado y táctiles
@@ -995,33 +1026,62 @@
                 });
             }
 
-            // Ejecutar el juego completo
-            var currentLevel = 0;
-            
-            function runGame(plans, Display) {
-                function startLevel(n) {
-                    currentLevel = n;
-                    document.getElementById('level-info').textContent = 'Nivel ' + (n + 1);
+            // Función para cambiar de nivel
+            function changeLevel(newLevel) {
+                if (newLevel >= 0 && newLevel < LEVELS.length) {
+                    currentLevel = newLevel;
                     
-                    runLevel(new Level(plans[n]), Display, function (status) {
+                    // Mostrar notificación de cambio de nivel
+                    var notification = document.getElementById('level-notification');
+                    notification.textContent = "Nivel " + (currentLevel + 1);
+                    notification.style.opacity = '1';
+                    
+                    setTimeout(function() {
+                        notification.style.opacity = '0';
+                    }, 1500);
+                    
+                    // Actualizar información del nivel
+                    document.getElementById('level-info').textContent = "Nivel " + (currentLevel + 1);
+                    
+                    // Limpiar el nivel actual
+                    if (currentDisplay) {
+                        currentDisplay.clear();
+                    }
+                    
+                    // Iniciar el nuevo nivel
+                    currentLevelInstance = new Level(LEVELS[currentLevel]);
+                    runLevel(currentLevelInstance, DOMDisplay, function (status) {
                         if (status == 'lost') {
                             setTimeout(function() {
-                                startLevel(n);
+                                changeLevel(currentLevel);
                             }, 1000);
-                        } else if (n < plans.length - 1) {
+                        } else if (currentLevel < LEVELS.length - 1) {
                             setTimeout(function() {
-                                startLevel(n + 1);
+                                changeLevel(currentLevel + 1);
                             }, 1000);
                         } else {
                             document.getElementById('level-info').textContent = '¡Has ganado!';
                         }
                     });
                 }
-                startLevel(0);
             }
 
             // Iniciar el juego
-            runGame(LEVELS, DOMDisplay);
+            gameRunning = true;
+            currentLevelInstance = new Level(LEVELS[currentLevel]);
+            runLevel(currentLevelInstance, DOMDisplay, function (status) {
+                if (status == 'lost') {
+                    setTimeout(function() {
+                        changeLevel(currentLevel);
+                    }, 1000);
+                } else if (currentLevel < LEVELS.length - 1) {
+                    setTimeout(function() {
+                        changeLevel(currentLevel + 1);
+                    }, 1000);
+                } else {
+                    document.getElementById('level-info').textContent = '¡Has ganado!';
+                }
+            });
             
             // Ocultar instrucciones después de 5 segundos
             setTimeout(function() {
@@ -1029,8 +1089,15 @@
             }, 5000);
         }
 
-
-    </script> 
+        // Si las imágenes no se cargan, iniciar el juego de todos modos después de un tiempo
+        setTimeout(function() {
+            if (!imageLoaded) {
+                console.warn("No se pudieron cargar todas las imágenes, iniciando juego sin ellas");
+                document.getElementById('loading').style.display = 'none';
+                initGame();
+            }
+        }, 3000);
+    </script>
 
   <script>
     if ('serviceWorker' in navigator) {
