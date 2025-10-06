@@ -1026,7 +1026,7 @@
                 });
             }
 
-            // Función para cambiar de nivel
+            // Función para cambiar de nivel - CORREGIDA
             function changeLevel(newLevel) {
                 if (newLevel >= 0 && newLevel < LEVELS.length) {
                     currentLevel = newLevel;
@@ -1043,9 +1043,28 @@
                     // Actualizar información del nivel
                     document.getElementById('level-info').textContent = "Nivel " + (currentLevel + 1);
                     
-                    // Limpiar el nivel actual
+                    // Limpiar el nivel actual de forma más robusta
                     if (currentDisplay) {
-                        currentDisplay.clear();
+                        try {
+                            currentDisplay.clear();
+                        } catch (e) {
+                            console.log("Error limpiando display anterior:", e);
+                            // Si hay error, limpiar manualmente el contenedor
+                            var gameContainer = document.getElementById('game-container');
+                            while (gameContainer.firstChild) {
+                                if (gameContainer.firstChild.id !== 'level-info' && 
+                                    gameContainer.firstChild.id !== 'instructions' && 
+                                    gameContainer.firstChild.id !== 'loading' && 
+                                    gameContainer.firstChild.id !== 'fullscreen-btn' && 
+                                    gameContainer.firstChild.id !== 'touch-controls' && 
+                                    gameContainer.firstChild.id !== 'touch-indicator' && 
+                                    gameContainer.firstChild.id !== 'level-notification') {
+                                    gameContainer.removeChild(gameContainer.firstChild);
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
                     }
                     
                     // Iniciar el nuevo nivel
