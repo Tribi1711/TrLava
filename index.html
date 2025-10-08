@@ -189,6 +189,15 @@
             background: rgba(255, 100, 100, 0.7);
         }
         
+        /* Nuevo botón de dash */
+        #dash-btn {
+            background: rgba(100, 255, 100, 0.5);
+        }
+        
+        #dash-btn:active {
+            background: rgba(100, 255, 100, 0.7);
+        }
+        
         /* Indicador de que es un juego táctil */
         .touch-indicator {
             display: none;
@@ -225,7 +234,7 @@
             background: rgba(0, 0, 0, 0.7);
         }
         
-        /* Notificación de cambio de nivel */
+        /* Notificación de cambio de nivel - MODIFICADO para pantalla completa */
         #level-notification {
             position: fixed;
             top: 50%;
@@ -236,11 +245,71 @@
             background: rgba(0, 0, 0, 0.8);
             padding: 15px 30px;
             border-radius: 10px;
-            z-index: 1000;
+            z-index: 10000; /* Aumentado para pantalla completa */
             text-align: center;
             opacity: 0;
             transition: opacity 0.3s;
             pointer-events: none;
+        }
+        
+        /* Pantalla de habilidad desbloqueada */
+        #ability-unlocked {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 10000;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        #ability-unlocked h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #ffcc00;
+        }
+        
+        #ability-unlocked h2 {
+            font-size: 28px;
+            margin-bottom: 30px;
+            color: #ff6600;
+        }
+        
+        #ability-image {
+            width: 150px;
+            height: 150px;
+            margin-bottom: 30px;
+            border: 3px solid #ffcc00;
+            border-radius: 10px;
+        }
+        
+        #ability-description {
+            font-size: 18px;
+            max-width: 600px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+        
+        #continue-button {
+            background: #ff6600;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        #continue-button:hover {
+            background: #ff8800;
         }
     </style>
 </head>
@@ -248,7 +317,7 @@
     <div id="game-wrapper">
         <div id="game-container">
             <div id="level-info">Nivel 1</div>
-            <div id="instructions">Controles: A (izq) - D (der) - W/ESPACIO (saltar) | 1-5: Cambiar nivel</div>
+            <div id="instructions">Controles: A/D (mov) - W/ESPACIO (saltar) - FLECHA ABAJO/S (dash) | 1-4: Cambiar nivel</div>
             <div id="loading">Cargando juego...</div>
             <button id="fullscreen-btn">Pantalla Completa</button>
             
@@ -260,12 +329,28 @@
                 </div>
                 <div class="touch-section">
                     <div class="touch-btn" id="jump-btn">↑</div>
+                    <div class="touch-btn" id="dash-btn">↓</div>
                 </div>
             </div>
             
             <div class="touch-indicator" id="touch-indicator">Toque para comenzar</div>
-            <div id="level-notification">Nivel 1</div>
         </div>
+    </div>
+
+    <!-- Notificación de cambio de nivel - MOVIDA FUERA del game-container -->
+    <div id="level-notification">Nivel 1</div>
+
+    <!-- Pantalla de habilidad desbloqueada -->
+    <div id="ability-unlocked">
+        <h1>¡Habilidad Desbloqueada!</h1>
+        <h2>Capa Sombria</h2>
+        <img id="ability-image" src="assets/player4.png" alt="Capa Sombria">
+        <div id="ability-description">
+            <p>¡Has conseguido la Capa Sombria! Esta habilidad te permite realizar un dash.</p>
+            <p><strong>¿Para qué sirve?</strong> Te desplaza rápidamente 3 casillas en la dirección que miras, permitiéndote esquivar obstáculos o alcanzar plataformas lejanas.</p>
+            <p><strong>¿Cómo se utiliza?</strong> Presiona FLECHA ABAJO o M (o el botón verde de dash en móviles) para activar el dash tanto en el suelo como en el aire.</p>
+        </div>
+        <button id="continue-button">Continuar al Nivel 5</button>
     </div>
 
     <script>
@@ -273,7 +358,7 @@
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
         
         if (isTouchDevice) {
-            document.getElementById('instructions').textContent = "Controles: A (izq) - D (der) - W/ESPACIO (saltar) | Toque los botones para moverse";
+            document.getElementById('instructions').textContent = "TrLava";
             document.getElementById('touch-controls').style.display = 'flex';
             document.getElementById('touch-indicator').style.display = 'block';
         }
@@ -283,7 +368,8 @@
             idle: new Image(),
             walk1: new Image(),
             walk2: new Image(),
-            jump: new Image()
+            jump: new Image(),
+            dash: new Image()
         };
         
         var imagesLoaded = 0;
@@ -314,6 +400,7 @@
         playerImages.walk1.src = 'assets/player.png';
         playerImages.walk2.src = 'assets/player2.png';
         playerImages.jump.src = 'assets/player3.png';
+        playerImages.dash.src = 'assets/player4.png';
         
         // Niveles del juego
         var LEVELS = [
@@ -430,30 +517,30 @@
                 '                                                                                                  xxxxx       ',
                 '                                                                                                  x           ',
                 '                                                                                                  x xxx       ',
-                '                          o                                                                       x x x       ',
-                '                                                                                             o o oxxx x       ',
+                '                                                                                                  x x x       ',
+                '                                                                                                  xxx x       ',
                 '                   xxx                                                                                x       ',
-                '       !  o  !                                                xxxxx xxxxx xxxxx xxxxx xxxxx xxxxx xxxxx       ',
+                '       !     !                                                xxxxx xxxxx xxxxx xxxxx xxxxx xxxxx xxxxx       ',
                 '       x     x                                                x   x x   x x   x x   x x   x x   x x           ',
-                '       x= o  x            x                                   xxx x xxx x xxx x xxx x xxx x xxx x xxxxx       ',
+                '       x=    x            x                                   xxx x xxx x xxx x xxx x xxx x xxx x xxxxx       ',
                 '       x     x                                                  x x   x x   x x   x x   x x   x x     x       ',
-                '       !  o  !            o                                  xxxx xxxxx xxxxx xxxxx xxxxx xxxxx xxxxxxx       ',
+                '       !     !                                               xxxx xxxxx xxxxx xxxxx xxxxx xxxxx xxxxxxx       ',
                 '                                                                                                              ',
-                '          o              xxx                              xx                                                  ',
+                '                         xxx                              xx                                                  ',
                 '                                                                                                              ',
                 '                                                                                                              ',
                 '                                                      xx                                                      ',
                 '                   xxx         xxx                                                                            ',
                 '                                                                                                              ',
-                '                          o                                                     x      x                      ',
+                '                                                                                x      x                      ',
                 '                                                          xx     xx                                           ',
                 '             xxx         xxx         xxx                                 x                  x                 ',
                 '                                                                                                              ',
                 '                                                                 ||                                           ',
                 '  xxxxxxxxxxx                                                                                                 ',
-                '  x         x o xxxxxxxxx o xxxxxxxxx o xx                                                x                   ',
-                '  x         x   x       x   x       x   x                 ||                  x     x                         ',
-                '  x  @      xxxxx   o   xxxxx   o   xxxxx                                                                     ',
+                '  x         x   xxxxxxxxx   xxxxxxxxx   xx                                                x                   ',
+                '  x   o     x   x       x   x       x   x                 ||                  x     x                         ',
+                '  x  @      xxxxx       xxxxx       xxxxx                                                                     ',
                 '  xxxxxxx                                     xxxxx       xx     xx     xxx                                   ',
                 '        x=                  =                =x   x                     xxx                                   ',
                 '        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx   x!!!!!!!!!!!!!!!!!!!!!xxx!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
@@ -461,18 +548,18 @@
                 '                                                                                                              ',
             ],[
                 '                                      x!!x                        xxxxxxx                                    x!x  ',
-                '                                     xx!!x                     xxxx     xxxx                                 x!x  ',
-                '                                      x!!xxxxxxxxxx           xx           xx                                x!x  ',
-                '                                      xx!!!!!!!!!!xx         xx             xx                               x!x  ',
+                '                                      x!!x                     xxxxxxxxxxxxx                                 x!x  ',
+                '                                      x!!xxxxxxxxxx           xx!!!!!!!!!!!xx                                x!x  ',
+                '                                      xx!!!!!!!!!!xx         xxxxxxxxxxxxxxxxx                               x!x  ',
                 '                                       xxxxxxxxxx!!x         x                                    o   o   o  x!x  ',
                 '                                                xx!x         x     o   o                                    xx!x  ',
-                '                   xx    x     x                 x!x         x                                xxxxxxxxxxxxxxx!!x  ',
-                '               x                    |            xvx         x     x   x                        !!!!!!!!!!!!!!xx  ',
-                '          o                         x                        xx  |   |   |  xx            xxxxxxxxxxxxxxxxx!xxx   ',
-                '          x              oo          x                        xx!!!!!!!!!!!xx            v                x!x      ',
-                '              o         xxxx              |                     xxxx!!!!!xxxx                             x!x    ',
-                '              x                           x    x     x            xxxxxxx        xxx         xxx          xvx     ',
-                '                    x                          x     x                           x x       x x xxxxxx             ',
+                '             o                                   x!x         x                                xxxxxxxxxxxxxxx!!x  ',
+                '             o                      |            xvx         x     x   x                        !!!!!!!!!!!!!!xx  ',
+                '             x           xx         x                        xx  |   |   |  xx            xxxxxxxxxxxxxxxxx!xxx   ',
+                '                                     x                         xx!!!!!!!!!!!xx            v               x!x     ',
+                '                                          |                     xx!!!!!!!!xxx                             x!x     ',
+                '                                          x    x     x           xxxxxxxxxx      xxx         xxx          xvx     ',
+                '                                               x     x                           x x       x x xxxxxx             ',
                 '                                               x     x                             x       xxx      v             ',
                 '                                               x     x                             xx        x          x         ',
                 '                                               xx    x                             x         x                    ',
@@ -480,16 +567,16 @@
                 '               xxxxxxx        xxx   xxx        x     x               x   x         x         x                    ',
                 '              xx     xx         x   x          x     x     xxxxxx    x   x   xxxxxxxxx       x          x         ',
                 '             xx       xx        x o x          x    xx               x   x   x               x      o             ',
-                '     @       x         x x      x   x          x     x               x   x   x               x      x             ',
+                '     @       x         xxx      x   x          x     x               x   x   x               x      x             ',
                 '    xxx      x    o    x        x   x          x     x               x   xxxxx   xxxxxx      x        x           ',
                 '    x x      x         x       xx o xx         x     x               x     o     x x         x                    ',
-                '!!!!x x!!!!!!x    x    x   x!!xx     xx!!!!!!!!xx    x!!!!!!!!!!     x     =     x x         x                    ',
-                '!!!!x x!!!!!!x         x    !xx       xxxxxxxxxx     x!!!!!!!xx!     xxxxxxxxxxxxx xx  o o  xx                    ',
-                '!!!!x x!!!!!!x              !x    o                 xx!!!!!!xx !                    xx     xx         x           ',
+                '!!!!x x!!!!!!x    x    x   xxxxx     xx!!!!!!!!xx    x!!!!!!!!!!     x     =     x x         x                    ',
+                '!!!!x x!!!!!!x        ox   x!xx       xxxxxxxxxx     x!!!!!!!xx!     xxxxxxxxxxxxx xx  o o  xx                    ',
+                '!!!!x x!!!!!!x     xxxxx   x!x    o                 xx!!!!!!xx !                    xx     xx         x           ',
                 '!!!!x x!!!!!!x x           x!x                     xx!!!!!!xx  !                     xxxxxxx                      ',
-                '!!!!x x!!!!!!x    x        x!xx       xxxxxxxxxxxxxx!!!!!!xx   !                                  x               ',
-                '!!!!x x!!!!!!x         xxxxx!!xxxxxxxxx!!!!!!!!!!!!!!!!!!xx    !               oo     oo                          ',
-                '!!!!x x!!!!!!x         x!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!xx     ! xx  x    xxxxxxxxxxxxxxxxxxxxx                   ',
+                '!!!!x x!!!!!!x            xx!xx       xxxxxxxxxxxxxx!!!!!!xx   !                                  x               ',
+                '!!!!x x!!!!!!x   xxx   xxxx!!!xxxxxxxxx!!!!!!!!!!!!!!!!!!xx    !               o      o                           ',
+                '!!!!x x!!!!!!x   xxx   x!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!xx     ! xx  x    xxxxxxxx   xxx  xxxxx                   ',
           
 ]
 
@@ -501,12 +588,14 @@
         var currentDisplay = null;
         var currentAnimation = null;
         var gameRunning = false;
+        var playerHasAirDash = false; // Controla si el jugador tiene la habilidad de dash aéreo
 
         // Sistema de teclas simplificado
         var pressedKeys = {
             left: false,
             right: false,
             up: false,
+            down: false, // Nueva tecla para el dash
             space: false
         };
         
@@ -514,7 +603,8 @@
         var touchControlsState = {
             left: false,
             right: false,
-            space: false
+            space: false,
+            dash: false // Nuevo estado para el dash
         };
 
         function initGame() {
@@ -533,12 +623,19 @@
                 }
             });
             
-            // Configurar eventos de teclado para cambiar niveles
+            // Configurar botón de continuar para la pantalla de habilidad
+            document.getElementById('continue-button').addEventListener('click', function() {
+                document.getElementById('ability-unlocked').style.display = 'none';
+                playerHasAirDash = true; // El jugador ahora tiene la habilidad
+                changeLevel(4); // Nivel 5
+            });
+            
+            // Configurar eventos de teclado para cambiar niveles (solo niveles 1-4)
             document.addEventListener('keydown', function(event) {
-                // Teclas 1-5 para cambiar niveles
-                if (event.key >= '1' && event.key <= '5') {
+                // Teclas 1-4 para cambiar niveles (no permitir tecla 5)
+                if (event.key >= '1' && event.key <= '4') {
                     var levelNumber = parseInt(event.key) - 1;
-                    if (levelNumber < LEVELS.length) {
+                    if (levelNumber < LEVELS.length - 1) { // Solo permitir hasta nivel 4
                         changeLevel(levelNumber);
                     }
                 }
@@ -554,6 +651,10 @@
                     pressedKeys.up = true;
                     pressedKeys.space = true;
                 }
+                // Nueva tecla para el dash
+                if (event.key === 'm' || event.key === 'M' || event.key === 'ArrowDown') {
+                    pressedKeys.down = true;
+                }
             });
             
             document.addEventListener('keyup', function(event) {
@@ -566,6 +667,10 @@
                 if (event.key === 'w' || event.key === 'W' || event.key === 'ArrowUp' || event.key === ' ') {
                     pressedKeys.up = false;
                     pressedKeys.space = false;
+                }
+                // Nueva tecla para el dash
+                if (event.key === 'm' || event.key === 'M' || event.key === 'ArrowDown') {
+                    pressedKeys.down = false;
                 }
             });
             
@@ -600,6 +705,17 @@
                     e.preventDefault();
                     touchControlsState.space = false;
                 });
+                
+                // Nuevo control para el dash táctil
+                document.getElementById('dash-btn').addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    touchControlsState.dash = true;
+                });
+                
+                document.getElementById('dash-btn').addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    touchControlsState.dash = false;
+                });
             }
             
             // Clase Vector para manejar posiciones y movimientos
@@ -628,16 +744,39 @@
             // Definición de la clase Player
             function Player(pos) {
                 this.pos = pos.plus(new Vector(0, -0.5));
-                this.size = new Vector(0.8, 1.8); // Tamaño fijo del jugador
+                this.size = new Vector(0.8, 1.7); // Tamaño normal para player.png, player2.png, player3.png
                 this.pos = pos.plus(new Vector(0, -(this.size.y - 1))); // Ajuste dinámico para no atravesar el suelo
                 this.speed = new Vector(0, 0);
                 this.facing = 'right'; // Dirección a la que mira el jugador
                 this.walkFrame = 0; // Frame actual de la animación de caminar
                 this.walkTimer = 0; // Temporizador para la animación de caminar
                 this.isJumping = false; // Si está saltando
+                this.isDashing = false; // Si está haciendo dash
+                this.dashCooldown = 0; // Tiempo de espera para el próximo dash
+                this.dashDuration = 0; // Duración restante del dash actual
+                this.canAirDash = playerHasAirDash; // Si puede hacer dash aéreo
+                this.hasDashed = false; // Si ya usó el dash en este salto o en el suelo
+                this.dashPressed = false; // Si se presionó dash en este frame
+                this.prevDashKey = false; // Estado anterior de la tecla de dash
+                this.dashProgress = 0; // Progreso del dash (0 a 3 casillas)
+                this.dashStartPos = null; // Posición inicial del dash
+                this.dashTargetPos = null; // Posición objetivo del dash
+                
+                // TAMAÑO ESPECIAL PARA PLAYER4.PNG (DASH)
+                // Puedes editar estos valores para cambiar el tamaño durante el dash
+                this.dashSize = new Vector(1.7, 1.6); // Ancho: 1.2, Alto: 1.8
             }
 
             Player.prototype.type = 'player';
+
+            // Método para obtener el tamaño actual según el estado
+            Player.prototype.getCurrentSize = function() {
+                if (this.isDashing) {
+                    return this.dashSize; // Tamaño especial para el dash
+                } else {
+                    return this.size; // Tamaño normal para otros estados
+                }
+            };
 
             // Definición de la clase Lava
             function Lava(pos, ch) {
@@ -776,28 +915,100 @@
 
             // Movimiento horizontal del jugador
             var playerXSpeed = 7;
+            var dashSpeed = 20; // Velocidad muy alta para el dash
+            var dashDuration = 0.15; // Duración muy corta para el dash
             
             Player.prototype.moveX = function (step, level, keys) {
                 this.speed.x = 0;
                 var wasMoving = keys.left || keys.right;
                 
-                if (keys.left) {
-                    this.speed.x -= playerXSpeed;
-                    this.facing = 'left';
-                }
-                if (keys.right) {
-                    this.speed.x += playerXSpeed;
-                    this.facing = 'right';
-                }
-
-                var motion = new Vector(this.speed.x * step, 0);
-                var newPos = this.pos.plus(motion);
-                var obstacle = level.obstacleAt(newPos, this.size);
-                if (obstacle) level.playerTouched(obstacle);
-                else this.pos = newPos;
+                // Detectar si se acaba de presionar dash
+                this.dashPressed = (keys.down || keys.dash) && !this.prevDashKey;
+                this.prevDashKey = keys.down || keys.dash;
                 
-                // Animación de caminar
-                if (wasMoving) {
+                // Manejar dash (ahora funciona tanto en suelo como en aire)
+                if (this.canAirDash && !this.hasDashed && this.dashPressed && !this.isDashing) {
+                    this.isDashing = true;
+                    this.dashDuration = dashDuration;
+                    this.hasDashed = true;
+                    this.dashProgress = 0;
+                    this.dashStartPos = new Vector(this.pos.x, this.pos.y);
+                    
+                    // Calcular la posición objetivo (3 casillas en la dirección que mira)
+                    var direction = this.facing === 'left' ? -1 : 1;
+                    this.dashTargetPos = this.pos.plus(new Vector(3 * direction, 0));
+                    
+                    // Verificar si hay obstáculos en el camino
+                    for (var i = 1; i <= 3; i++) {
+                        var checkPos = this.pos.plus(new Vector(i * direction, 0));
+                        if (level.obstacleAt(checkPos, this.size)) {
+                            // Si hay obstáculo, ajustar la posición objetivo
+                            this.dashTargetPos = this.pos.plus(new Vector((i - 0.5) * direction, 0));
+                            break;
+                        }
+                    }
+                }
+                
+                // Actualizar cooldown del dash
+                if (this.dashCooldown > 0) {
+                    this.dashCooldown -= step;
+                }
+                
+                // Si está en dash, aplicar movimiento de dash
+                if (this.isDashing) {
+                    this.dashDuration -= step;
+                    
+                    // Mover hacia la posición objetivo durante el dash
+                    var dashDirection = this.dashTargetPos.x > this.pos.x ? 1 : -1;
+                    var dashDistance = dashSpeed * step;
+                    
+                    // Calcular nueva posición
+                    var newX = this.pos.x + (dashDistance * dashDirection);
+                    
+                    // Limitar al objetivo
+                    if ((dashDirection > 0 && newX > this.dashTargetPos.x) || 
+                        (dashDirection < 0 && newX < this.dashTargetPos.x)) {
+                        newX = this.dashTargetPos.x;
+                    }
+                    
+                    var newPos = new Vector(newX, this.pos.y);
+                    var obstacle = level.obstacleAt(newPos, this.size);
+                    
+                    if (!obstacle) {
+                        this.pos = newPos;
+                    } else {
+                        // Si hay obstáculo, detener el dash
+                        this.isDashing = false;
+                    }
+                    
+                    // Si se acabó el tiempo de dash o llegó al objetivo, terminar el dash
+                    if (this.dashDuration <= 0 || 
+                        (dashDirection > 0 && this.pos.x >= this.dashTargetPos.x) ||
+                        (dashDirection < 0 && this.pos.x <= this.dashTargetPos.x)) {
+                        this.isDashing = false;
+                    }
+                } else {
+                    // Movimiento normal
+                    var currentSpeed = playerXSpeed;
+                    
+                    if (keys.left) {
+                        this.speed.x -= currentSpeed;
+                        this.facing = 'left';
+                    }
+                    if (keys.right) {
+                        this.speed.x += currentSpeed;
+                        this.facing = 'right';
+                    }
+
+                    var motion = new Vector(this.speed.x * step, 0);
+                    var newPos = this.pos.plus(motion);
+                    var obstacle = level.obstacleAt(newPos, this.size);
+                    if (obstacle) level.playerTouched(obstacle);
+                    else this.pos = newPos;
+                }
+                
+                // Animación de caminar (solo si no está en dash)
+                if (wasMoving && !this.isDashing) {
                     this.walkTimer += step;
                     if (this.walkTimer > 0.15) { // Cambiar frame cada 0.15 segundos
                         this.walkTimer = 0;
@@ -814,26 +1025,37 @@
             var jumpSpeed = 17;
             
             Player.prototype.moveY = function (step, level, keys) {
-            this.speed.y += step * gravity;
-            var motion = new Vector(0, this.speed.y * step);
-            var newPos = this.pos.plus(motion);
-            var obstacle = level.obstacleAt(newPos, this.size);
-
-            if (obstacle) {
-                level.playerTouched(obstacle);
-
-                // Si está en el suelo y presiona salto
-                if ((keys.up || keys.space) && this.speed.y >= 0) {
-                    this.speed.y = -jumpSpeed;
-                    this.isJumping = true;   // Activar salto
-                } else {
+                // Si está en dash, no aplicar gravedad
+                if (this.isDashing) {
+                    // Durante el dash, mantener la altura actual
                     this.speed.y = 0;
-                    this.isJumping = false;  // En el suelo
+                } else {
+                    // Aplicar gravedad normal
+                    this.speed.y += step * gravity;
                 }
-            } else {
-                this.pos = newPos;
-            }
-        };
+                
+                var motion = new Vector(0, this.speed.y * step);
+                var newPos = this.pos.plus(motion);
+                var obstacle = level.obstacleAt(newPos, this.size);
+
+                if (obstacle) {
+                    level.playerTouched(obstacle);
+
+                    // Si está en el suelo y presiona salto
+                    if ((keys.up || keys.space) && this.speed.y >= 0) {
+                        this.speed.y = -jumpSpeed;
+                        this.isJumping = true;   // Activar salto
+                        this.hasDashed = false; // Resetear el dash al tocar el suelo
+                    } else {
+                        this.speed.y = 0;
+                        this.isJumping = false;  // En el suelo
+                        this.hasDashed = false; // Resetear el dash al tocar el suelo
+                    }
+                } else {
+                    this.pos = newPos;
+                    this.isJumping = true; // En el aire
+                }
+            };
 
             // Acciones del jugador
             Player.prototype.act = function (step, level, keys) {
@@ -844,8 +1066,7 @@
                 if (otherActor) level.playerTouched(otherActor.type, otherActor);
 
                 // Animación de perder
-                // Animación de perder (sin modificar el tamaño del sprite)
-               if (level.status == 'lost') {
+                if (level.status == 'lost') {
                this.pos.y += step;
               this._isDying = true; // flag de animación de muerte
                 }
@@ -853,7 +1074,9 @@
 
             // Obtener la imagen actual del jugador según su estado
             Player.prototype.getCurrentImage = function() {
-                if (this.isJumping) {
+                if (this.isDashing) {
+                    return playerImages.dash;
+                } else if (this.isJumping) {
                     return playerImages.jump;
                 } else if (this.speed.x !== 0) {
                     return this.walkFrame === 0 ? playerImages.walk1 : playerImages.walk2;
@@ -922,11 +1145,20 @@
                 
                 for (var i = 0; i < this.level.actors.length; i++) {
                     var actor = this.level.actors[i];
+                    
+                    // Usar el tamaño correcto según el estado
+                    var currentSize = actor.type === 'player' && actor.getCurrentSize ? 
+                                     actor.getCurrentSize() : actor.size;
+                    
                     var rect = element('div', 'actor ' + actor.type);
-                    rect.style.width = actor.size.x * scale + 'px';
-                    rect.style.height = actor.size.y * scale + 'px';
+                    rect.style.width = currentSize.x * scale + 'px';  // Usar currentSize
+                    rect.style.height = currentSize.y * scale + 'px'; // Usar currentSize
                     rect.style.left = actor.pos.x * scale + 'px';
-                    rect.style.top = actor.pos.y * scale + 'px';
+                    
+                    // Ajustar la posición vertical para que el cambio de tamaño sea desde los pies
+                    var verticalOffset = (actor.size.y - currentSize.y) * scale;
+                    rect.style.top = (actor.pos.y * scale + verticalOffset) + 'px';
+                    
                     rect.style.position = 'absolute';
                     
                     // Si es el jugador, aplicar la imagen y efectos correspondientes
@@ -937,7 +1169,6 @@
                             rect.style.backgroundRepeat = "no-repeat";
                             rect.style.backgroundPosition = "center";
                             rect.style.backgroundColor = "transparent";
-                            
 
                             // Aplicar efecto espejo si mira a la izquierda
                             if (actor.facing === 'left') {
@@ -1012,7 +1243,9 @@
                         left: pressedKeys.left || touchControlsState.left,
                         right: pressedKeys.right || touchControlsState.right,
                         up: pressedKeys.up || touchControlsState.space,
-                        space: pressedKeys.space || touchControlsState.space
+                        space: pressedKeys.space || touchControlsState.space,
+                        down: pressedKeys.down, // Tecla para dash
+                        dash: touchControlsState.dash // Control táctil para dash
                     };
                     
                     level.animate(step, combinedKeys);
@@ -1026,7 +1259,7 @@
                 });
             }
 
-            // Función para cambiar de nivel - CORREGIDA
+            // Función para cambiar de nivel
             function changeLevel(newLevel) {
                 if (newLevel >= 0 && newLevel < LEVELS.length) {
                     currentLevel = newLevel;
@@ -1057,8 +1290,7 @@
                                     gameContainer.firstChild.id !== 'loading' && 
                                     gameContainer.firstChild.id !== 'fullscreen-btn' && 
                                     gameContainer.firstChild.id !== 'touch-controls' && 
-                                    gameContainer.firstChild.id !== 'touch-indicator' && 
-                                    gameContainer.firstChild.id !== 'level-notification') {
+                                    gameContainer.firstChild.id !== 'touch-indicator') {
                                     gameContainer.removeChild(gameContainer.firstChild);
                                 } else {
                                     break;
@@ -1075,9 +1307,14 @@
                                 changeLevel(currentLevel);
                             }, 1000);
                         } else if (currentLevel < LEVELS.length - 1) {
-                            setTimeout(function() {
-                                changeLevel(currentLevel + 1);
-                            }, 1000);
+                            // Si completamos el nivel 4, mostrar pantalla de habilidad
+                            if (currentLevel === 3) {
+                                document.getElementById('ability-unlocked').style.display = 'flex';
+                            } else {
+                                setTimeout(function() {
+                                    changeLevel(currentLevel + 1);
+                                }, 1000);
+                            }
                         } else {
                             document.getElementById('level-info').textContent = '¡Has ganado!';
                         }
@@ -1094,9 +1331,14 @@
                         changeLevel(currentLevel);
                     }, 1000);
                 } else if (currentLevel < LEVELS.length - 1) {
-                    setTimeout(function() {
-                        changeLevel(currentLevel + 1);
-                    }, 1000);
+                    // Si completamos el nivel 4, mostrar pantalla de habilidad
+                    if (currentLevel === 3) {
+                        document.getElementById('ability-unlocked').style.display = 'flex';
+                    } else {
+                        setTimeout(function() {
+                            changeLevel(currentLevel + 1);
+                        }, 1000);
+                    }
                 } else {
                     document.getElementById('level-info').textContent = '¡Has ganado!';
                 }
