@@ -311,6 +311,1593 @@
         #continue-button:hover {
             background: #ff8800;
         }
+        
+        /* Nueva pantalla de habilidad desbloqueada para Alas del Monarca */
+        #ability-unlocked-doublejump {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 10000;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        #ability-unlocked-doublejump h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #ffcc00;
+        }
+        
+        #ability-unlocked-doublejump h2 {
+            font-size: 28px;
+            margin-bottom: 30px;
+            color: #66ccff;
+        }
+        
+        #ability-image-doublejump {
+            width: 150px;
+            height: 150px;
+            margin-bottom: 30px;
+            border: 3px solid #66ccff;
+            border-radius: 10px;
+        }
+        
+        #ability-description-doublejump {
+            font-size: 18px;
+            max-width: 600px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+        
+        #continue-button-doublejump {
+            background: #66ccff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        #continue-button-doublejump:hover {
+            background: #88ddff;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-wrapper">
+        <div id="game-container">
+            <div id="level-info">Nivel 1</div>
+            <div id="instructions">Controles: A/D (mov) - W/ESPACIO (saltar) - FLECHA ABAJO/S (dash) | 1-4: Cambiar nivel | Ctrl+Mayús+1-7: Saltar a nivel</div>
+            <div id="loading">Cargando juego...</div>
+            <button id="fullscreen-btn">tribi</button>
+            
+            <!-- Controles táctiles -->
+            <div id="touch-controls">
+                <div class="touch-section">
+                    <div class="touch-btn" id="left-btn">←</div>
+                    <div class="touch-btn" id="right-btn">→</div>
+                </div>
+                <div class="touch-section">
+                    <div class="touch-btn" id="jump-btn">↑</div>
+                    <div class="touch-btn" id="dash-btn">↓</div>
+                </div>
+            </div>
+            
+            <div class="touch-indicator" id="touch-indicator">Toque para comenzar</div>
+        </div>
+    </div>
+
+    <!-- Notificación de cambio de nivel - MOVIDA FUERA del game-container -->
+    <div id="level-notification">Nivel 1</div>
+
+    <!-- Pantalla de habilidad desbloqueada para Capa Sombria -->
+    <div id="ability-unlocked">
+        <h1>¡Habilidad Desbloqueada!</h1>
+        <h2>Capa Sombria</h2>
+        <img id="ability-image" src="assets/player4.png" alt="Capa Sombria">
+        <div id="ability-description">
+            <p>¡Has conseguido la Capa Sombria! Esta habilidad te permite realizar un dash.</p>
+            <p><strong>¿Para qué sirve?</strong> Te desplaza rápidamente 3 casillas en la dirección que miras, permitiéndote esquivar obstáculos o alcanzar plataformas lejanas.</p>
+            <p><strong>¿Cómo se utiliza?</strong> Presiona FLECHA ABAJO o M (o el botón verde de dash en móviles) para activar el dash tanto en el suelo como en el aire.</p>
+        </div>
+        <button id="continue-button">Continuar</button>
+    </div>
+
+    <!-- Nueva pantalla de habilidad desbloqueada para Alas del Monarca -->
+    <div id="ability-unlocked-doublejump">
+        <h1>¡Habilidad Desbloqueada!</h1>
+        <h2>Alas del Monarca</h2>
+        <img id="ability-image-doublejump" src="assets/player5.png" alt="Alas del Monarca">
+        <div id="ability-description-doublejump">
+            <p>¡Has conseguido las Alas del Monarca! Esta habilidad te permite realizar un doble salto.</p>
+            <p><strong>¿Para qué sirve?</strong> Te permite saltar una segunda vez mientras estás en el aire, alcanzando plataformas más altas o esquivando obstáculos. y tambien te servira para agarrarte a los techos de forma ilimitada</p>
+            <p><strong>¿Cómo se utiliza?</strong> Presiona la tecla de salto (W, ESPACIO, FLECHA ARRIBA o el botón de salto en móviles) una vez en el aire después de haber saltado.</p>
+        </div>
+        <button id="continue-button-doublejump">Continuar</button>
+    </div>
+
+    <script>
+        // Detectar si es un dispositivo táctil
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
+        
+        if (isTouchDevice) {
+            document.getElementById('instructions').textContent = "TrLava";
+            document.getElementById('touch-controls').style.display = 'flex';
+            document.getElementById('touch-indicator').style.display = 'block';
+        }
+
+        // Precargar las imágenes del jugador
+        var playerImages = {
+            idle: new Image(),
+            walk1: new Image(),
+            walk2: new Image(),
+            jump: new Image(),
+            dash: new Image(),
+            doubleJump: new Image() // Nueva imagen para el doble salto
+        };
+        
+        var imagesLoaded = 0;
+        var totalImages = Object.keys(playerImages).length;
+        var imageLoaded = false;
+        
+        // Función para verificar si todas las imágenes se cargaron
+        function checkAllImagesLoaded() {
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) {
+                imageLoaded = true;
+                document.getElementById('loading').style.display = 'none';
+                initGame();
+            }
+        }
+        
+        // Configurar eventos de carga para todas las imágenes
+        for (var key in playerImages) {
+            playerImages[key].onload = checkAllImagesLoaded;
+            playerImages[key].onerror = function() {
+                console.error("Error cargando imagen: " + this.src);
+                checkAllImagesLoaded();
+            };
+        }
+        
+        // Cargar las imágenes
+        playerImages.idle.src = 'assets/player.png';
+        playerImages.walk1.src = 'assets/player.png';
+        playerImages.walk2.src = 'assets/player2.png';
+        playerImages.jump.src = 'assets/player3.png';
+        playerImages.dash.src = 'assets/player4.png';
+        playerImages.doubleJump.src = 'assets/player5.png'; // Nueva imagen para el doble salto
+        
+        // Niveles del juego
+        var LEVELS = [
+            [
+                '                                                                                ',
+                '                                                                                ',
+                '                                                                                ',
+                '                                                                                ',
+                '                                                                                ',
+                '                                                                                ',
+                '                                                                  xxx           ',
+                '                                                   xx      xx    xx!xx          ',
+                '                                    o o      xx                  x!!!x          ',
+                '                                                                 xx!xx          ',
+                '                                   xxxxx                          xvx           ',
+                '                                                                            xx  ',
+                '  xx                                      o o                                x  ',
+                '  x                     o                                                    x  ',
+                '  x                                      xxxxx                             o x  ',
+                '  x          xxxx       o                                                    x  ',
+                '  x  @       x  x                                                xxxxx       x  ',
+                '  xxxxxxxxxxxx  xxxxxxxxxxxxxxx   xxxxxxxxxxxxxxxxxxxx     xxxxxxx   xxxxxxxxx  ',
+                '                              x   x                  x     x                    ',
+                '                              x!!!x                  x!!!!!x                    ',
+                '                              x!!!x                  x!!!!!x                    ',
+                '                              xxxxx                  xxxxxxx                    ',
+                '                                                                                ',
+                '                                                                                ',
+            ],
+            [
+                '                                      x!!x                        xxxxxxx                                    x!x  ',
+                '                                      x!!x                     xxxx     xxxx                                 x!x  ',
+                '                                      x!!xxxxxxxxxx           xx           xx                                x!x  ',
+                '                                      xx!!!!!!!!!!xx         xx             xx                               x!x  ',
+                '                                       xxxxxxxxxx!!x         x                                    o   o   o  x!x  ',
+                '                                                xx!x         x     o   o                                    xx!x  ',
+                '                                                 x!x         x                                xxxxxxxxxxxxxxx!!x  ',
+                '                                                 xvx         x     x   x                        !!!!!!!!!!!!!!xx  ',
+                '                                                             xx  |   |   |  xx            xxxxxxxxxxxxxxxxxxxxx   ',
+                '                                                              xx!!!!!!!!!!!xx            v                        ',
+                '                                                               xxxx!!!!!xxxx                                      ',
+                '                                               x     x            xxxxxxx        xxx         xxx                  ',
+                '                                               x     x                           x x         x x                  ',
+                '                                               x     x                             x         x                    ',
+                '                                               x     x                             xx        x                    ',
+                '                                               xx    x                             x         x                    ',
+                '                                               x     x      o  o     x   x         x         x                    ',
+                '               xxxxxxx        xxx   xxx        x     x               x   x         x         x                    ',
+                '              xx     xx         x   x          x     x     xxxxxx    x   x   xxxxxxxxx       x                    ',
+                '             xx       xx        x o x          x    xx               x   x   x               x                    ',
+                '     @       x         x        x   x          x     x               x   x   x               x                    ',
+                '    xxx      x         x        x   x          x     x               x   xxxxx   xxxxxx      x                    ',
+                '    x x      x         x       xx o xx         x     x               x     =     x x         x                    ',
+                '!!!!x x!!!!!!x         x!!!!!!xx     xx!!!!!!!!xx    x!!!!!!!!!!     x     =     x x         x                    ',
+                '!!!!x x!!!!!!x         x!!!!!xx       xxxxxxxxxx     x!!!!!!!xx!     xxxxxxxxxxxxx xx  o o  xx                    ',
+                '!!!!x x!!!!!!x         x!!!!!x    o                 xx!!!!!!xx !                    xx     xx                     ',
+                '!!!!x x!!!!!!x         x!!!!!x                     xx!!!!!!xx  !                     xxxxxxx                      ',
+                '!!!!x x!!!!!!x         x!!!!!xx       xxxxxxxxxxxxxx!!!!!!xx   !                                                  ',
+                '!!!!x x!!!!!!x         x!!!!!!xxxxxxxxx!!!!!!!!!!!!!!!!!!xx    !                                                  ',
+                '!!!!x x!!!!!!x         x!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!xx     !                                                  ',
+            ],
+            [
+                '                                                                                                              ',
+                '                                                                                                              ',
+                '                                                                                                              ',
+                '                                                                                                              ',
+                '                                                                                                              ',
+                '                                        o                                                                     ',
+                '                                                                                                              ',
+                '                                        x                                                                     ',
+                '                                        x                                                                     ',
+                '                                        x                                                                     ',
+                '                                        x                                                                     ',
+                '                                       xxx                                                                    ',
+                '                                       x x                 !!!        !!!  xxx                                ',
+                '                                       x x                 !x!        !x!                                     ',
+                '                                     xxx xxx                x          x                                      ',
+                '                                      x   x                 x   oooo   x       xxx                            ',
+                '                                      x   x                 x          x      x!!!x                           ',
+                '                                      x   x                 xxxxxxxxxxxx       xxx                            ',
+                '                                     xx   xx      x   x      x                                                ',
+                '                                      x   xxxxxxxxx   xxxxxxxx              x x                               ',
+                '                                      x   x           x                    x!!!x                              ',
+                '                                      x   x           x                     xxx                               ',
+                '                                     xx   xx          x                                                       ',
+                '                                      x   x= = = =    x            xxx                                        ',
+                '                                      x   x           x           x!!!x                                       ',
+                '                                      x   x    = = = =x     o      xxx       xxx                              ',
+                '                                     xx   xx          x                     x!!!x                             ',
+                '                              o   o   x   x           x     x                xxv        xxx                   ',
+                '                                      x   x           x              x                 x!!!x                  ',
+                '                             xxx xxx xxx xxx     o o  x!!!!!!!!!!!!!!x                   vx                   ',
+                '                             x xxx x x xxx x          x!!!!!!!!!!!!!!x                                        ',
+                '                             x             x   xxxxxxxxxxxxxxxxxxxxxxx                                        ',
+                '                             xx           xx                                         xxx                      ',
+                '  xxx                         x     x     x                                         x!!!x                xxx  ',
+                '  x x                         x    xxx    x                                          xxx                 x x  ',
+                '  x                           x    xxx    xxxxxxx                        xxxxx                             x  ',
+                '  x                           x           x                              x   x                             x  ',
+                '  x                           xx          x                              x x x                             x  ',
+                '  x                                       x       |xxxx|    |xxxx|     xxx xxx                             x  ',
+                '  x                xxx             o o    x                              x         xxx                     x  ',
+                '  x               xxxxx       xx          x                             xxx       x!!!x          x         x  ',
+                '  x               oxxxo       x    xxx    x                             x x        xxx          xxx        x  ',
+                '  x                xxx        xxxxxxxxxxxxx  x oo x    x oo x    x oo  xx xx                    xxx        x  ',
+                '  x      @          x         x           x!!x    x!!!!x    x!!!!x    xx   xx                    x         x  ',
+                '  xxxxxxxxxxxxxxxxxxxxxxxxxxxxx           xxxxxxxxxxxxxxxxxxxxxxxxxxxxx     xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx  ',
+                '                                                                                                              ',
+                '                                                                                                              ',
+            ],
+            [
+                '                                                                                                  xxx x       ',
+                '                                                                                                      x       ',
+                '                                                                                                  xxxxx       ',
+                '                                                                                                  x           ',
+                '                                                                                                  x xxx       ',
+                '                                                                                                  x x x       ',
+                '                          o                                                                 o  o  xxx x       ',
+                '          o        xxx                                                                                x       ',
+                '       !     !                                                xxxxx xxxxx xxxxx xxxxx xxxxx xxxxx xxxxx       ',
+                '       x  o  x                                                x   x x   x x   x x   x x   x x   x x           ',
+                '       x=    x            x                                   xxx x xxx x xxx x xxx x xxx x xxx x xxxxx       ',
+                '       x  o  x                                                  x x   x x   x x   x x   x x   x xo    x       ',
+                '       !     !            o                                  xxxx xxxxx xxxxx xxxxx xxxxx xxxxx xxxxxxx       ',
+                '          o                                                                                                   ',
+                '                         xxx                              xx                                                  ',
+                '                                                                                                              ',
+                '                                                                                                              ',
+                '                                                      xx                                                      ',
+                '                   xxx         xxx                                                                            ',
+                '                                                                                                              ',
+                '                                                                                x      x                      ',
+                '                                                          xx     xx                                           ',
+                '             xxx         xxx         xxx                                 x                  x                 ',
+                '                                                                                                              ',
+                '                                                                 ||                                           ',
+                '  xxxxxxxxxxx                                                                                                 ',
+                '  x         x o xxxxxxxxx o xxxxxxxxx o xx                                                x                   ',
+                '  x         x   x       x   x       x   x                 ||                  x     x                         ',
+                '  x  @      xxxxx   o   xxxxx   o   xxxxx                                                                     ',
+                '  xxxxxxx                                     xxxxx       xx     xx     xxx                                   ',
+                '        x=                  =                =x   x                     xxx                                   ',
+                '        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx   x!!!!!!!!!!!!!!!!!!!!!xxx!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
+                '                                                  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+                '                                                                                                              ',
+            ],[
+                '                                      x!!x                        xxxxxxx                                    x!x  ',
+                '                                      x!!x                     xxxxxxxxxxxxx                                 x!x  ',
+                '                                      x!!xxxxxxxxxx           xx!!!!!!!!!!!xx                                x!x  ',
+                '                                      xx!!!!!!!!!!xx         xxxxxxxxxxxxxxxxx                               x!x  ',
+                '                                       xxxxxxxxxx!!x         x                                               x!x  ',
+                '                                                xx!x         x                                      o  o  o xx!x  ',
+                '                                                 x!x         x     o   o                      xxxxxxxxxxxxxxx!!x  ',
+                '             o                      |            xvx         x     x   x                        !!!!!!!!!!!!!!xx  ',
+                '             x           xx         x                        xx  |   |   |  xx            xxxxxxxxxxxxxxxxx!xxx   ',
+                '                                     x                         xx!!!!!!!!!!!xx            v               x!x     ',
+                '                                          |                     xx!!!!!!!!xxx                             x!x     ',
+                '                                          x    x     x           xxxxxxxxxx      xxx         xxx          xvx     ',
+                '                                               x     x                           x x       x x xxxxxx             ',
+                '                                               x     x                             x       xxx      v             ',
+                '                                               x     x                             xx        x          x         ',
+                '                                               xx    x                             x         x                    ',
+                '                                               x     x               x   x         x         x                    ',
+                '               xxxxxxx        xxx   xxx        x     x               x   x         x         x                    ',
+                '              xx     xx         x o x          x     x     xxxxxx    x   x   xxxxxxxxx       x          x         ',
+                '             xx       xx        x   x          x    xx               x   x   x               x                    ',
+                '     @       x         xxx      x   x          x     x               x   x   x               x      x             ',
+                '    xxx      x         x        x o x          x     x               x   xxxxx   xxxxxx      x        x           ',
+                '    x x      x    o    x       xx   xx         x     x               x     o     x x         x                    ',
+                '!!!!x x!!!!!!x    x    x   xxxxx     xx!!!!!!!!xx    x!!!!!!!!!!     x     =     x x         x                    ',
+                '!!!!x x!!!!!!x        ox   x!xx   o   xxxxxxxxxx     x!!!!!!!xx!     xxxxxxxxxxxxx xx       xx                    ',
+                '!!!!x x!!!!!!x     xxxxx   x!x                      xx!!!!!!xx !                    xx  o  xx         x           ',
+                '!!!!x x!!!!!!x x           x!x                     xx!!!!!!xx  !                     xxxxxxx                      ',
+                '!!!!x x!!!!!!x            xx!xx       xxxxxxxxxxxxxx!!!!!!xx   !                                  x               ',
+                '!!!!x x!!!!!!x   xxx   xxxx!!!xxxxxxxxx!!!!!!!!!!!!!!!!!!xx    !                            oo                    ',
+                '!!!!x x!!!!!!x   xxx   x!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!xx     ! xx  x    xxxxxxxx   xxx  xxxxx                   ',
+          
+],[
+                '                      x!!!x                                                                                       ',
+                '                      x!!!x                                                                                       ',
+                '                      x!!!!x         xxxxxxxxxxxxxxxxxxxxxxxxx                                                    ',
+                '                       x!!!x        x   |                     x                                                   ',
+                '                        x!!x       x                           x                                                  ',
+                '                         vv        x                           x                                                  ',
+                '                                   x                           x                                                  ',
+                '                                                         o                                                        ',
+                ' @                                            x x       xxx                  oo            o              o       ',
+                'xx                                 xx         xxx        x     xx            xx           xxx            xx       ',
+                ' x                    o        o   x   |      x x   |    x    |x             vv            v              v       ',
+                ' x                    x  xx    x   x!!!!!!!!!!!!!!!!!!!!!!!!!!!x                                                  ',
+                ' x                    v             x!!!!!!!!!!!!!!!!!!!!!!!!!x                                                   ',
+                ' x         o      o                  xxxxxxxxxxxxxxxxxxxxxxxxx                                                    ',
+                ' x         x      x                                                                                               ',
+                ' x                                                                                                                ',
+                ' x                                                                                                                ',
+                ' x            x                                                                                                   ',
+                ' x                                                  o         o                                                   ',
+                ' x o                    x =   =   =     =     = x   o         o                                            o      ',
+                ' x         |      |     xxxxxxxxxxxxxxxxxxxxxxxxx   x         x       xxx    xxx       xxxxx           xxxxx      ',
+                ' xxxx!!!!!xx!!!!!!x     v                                                                                         ',
+                '                   x                                                                                              ',
+                '                                                                                                                  ',
+                '                                                                                                                  ',
+                '                     x    |       o   o                                                                           ',
+                '                      x   x   x   x   x                                                                           ',
+                '                                                                                                                  ',
+                '                                                                                                                  ',
+                '                                                                                                                  ',
+          
+],[
+                '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!',
+                '!!!!xxxxxx!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!vvxvvvxvv!!!!!!!!!!!!!!!',
+                '       v      v   v         v                                   v  v                    v  v  v   ',
+                '                                                                                                  ',
+                '                                                                                                  ',
+                ' oo                                                                                               ',
+                'xxxx!!!!!!!xxxxx                                                                                  ',
+                '                                                                                                  ',
+                '                                                                                                  ',
+                '         |                                                                                        ',
+                '               |                                x           x        x                            ',
+                '     xx  x           x  !        !                                                                ',
+                '     vv  x     x        !        !                                                                ',
+                '         x              !        !              o                                                 ',
+                'xxxox  xx               !        !           x  o                            o                    ',
+                '   xx                   !        !             xx                           xxx                   ',
+                '                        !        !         !!                                                     ',
+                '                        !        !         xx                                                     ',
+                '                        !        !                                                                ',
+                '                        !        !!!!!!!!                                                         ',
+                '                        !!        !!!!!xx                                                         ',
+                '                        !!            ! v                                                         ',
+                '     xx                  !!!          !                                                           ',                
+                '                          !!!         !                                                           ',
+                '                           !!!        !                                                           ',
+                '                            !!                                                                    ',
+                '                                                                                                  ',
+                '                                                                                                  ',
+                '     xx                                  !o                                                       ',
+                '     vv                                   x                                                       ',
+                '                                                                                                  ',
+                'xxxxx    x                                                                                        ',
+                '       xox                                                                                        ',
+                '       xx                                                                                         ',
+                '                                                                                                  ',
+                '                                      x!                                                          ',
+                '                                                                                                  ',
+                '                                                                                                  ',
+                '                                   !x!                                                     o      ',
+                '                                    v                                                     !x!     ',
+                '    @                                                                                             ',
+                '   xxxx                                                                                           ',
+                '   xxxx                             o                                                             ',
+                '   xxxx                          x  x  x                                                          ',
+                '   xxxx                                                                                           ',
+                '   xxxx                                                                                           ',
+            ]
+
+        ];
+
+        // Variables globales para controlar el juego
+        var currentLevel = 0;
+        var currentLevelInstance = null;
+        var currentDisplay = null;
+        var currentAnimation = null;
+        var gameRunning = false;
+        var playerHasAirDash = false; // Controla si el jugador tiene la habilidad de dash aéreo
+        var playerHasDoubleJump = false; // Nueva variable para controlar si el jugador tiene la habilidad de doble salto
+
+        // Sistema de teclas simplificado
+        var pressedKeys = {
+            left: false,
+            right: false,
+            up: false,
+            down: false, // Tecla para el dash
+            space: false
+        };
+        
+        // Estado de los controles táctiles
+        var touchControlsState = {
+            left: false,
+            right: false,
+            space: false,
+            dash: false // Estado para el dash
+        };
+
+        // Variable para rastrear si la tecla º está presionada
+        var degreeKeyPressed = false;
+
+        function initGame() {
+            // Ocultar indicador táctil al comenzar
+            document.getElementById('touch-indicator').style.display = 'none';
+            
+            // Configurar botón de pantalla completa
+            document.getElementById('fullscreen-btn').addEventListener('click', function() {
+                const elem = document.getElementById('game-wrapper');
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    elem.webkitRequestFullscreen();
+                } else if (elem.msRequestFullscreen) {
+                    elem.msRequestFullscreen();
+                }
+            });
+            
+            // Configurar botón de continuar para la pantalla de habilidad de dash
+            document.getElementById('continue-button').addEventListener('click', function() {
+                document.getElementById('ability-unlocked').style.display = 'none';
+                playerHasAirDash = true; // El jugador ahora tiene la habilidad de dash
+                // Solo cambiar de nivel si se llegó aquí de forma normal (nivel 4 completado)
+                if (currentLevel === 3) {
+                    changeLevel(4); // Nivel 5
+                }
+                // Si se activó con ºc, no cambiar de nivel
+            });
+            
+            // Configurar botón de continuar para la pantalla de habilidad de doble salto
+            document.getElementById('continue-button-doublejump').addEventListener('click', function() {
+                document.getElementById('ability-unlocked-doublejump').style.display = 'none';
+                playerHasDoubleJump = true; // El jugador ahora tiene la habilidad de doble salto
+                // Solo cambiar de nivel si se llegó aquí de forma normal (nivel 6 completado)
+                if (currentLevel === 5) {
+                    changeLevel(6); // Nivel 7
+                }
+                // Si se activó con ºa, no cambiar de nivel
+            });
+            
+            // Configurar eventos de teclado para cambiar niveles
+            document.addEventListener('keydown', function(event) {
+                // Detectar tecla º (código 192 para tecla `/~ en teclado US, o 'º' en español)
+                if (event.key === 'º' || event.key === '°' || event.code === 'Backquote' || event.keyCode === 192) {
+                    degreeKeyPressed = true;
+                    event.preventDefault(); // Evitar que se escriba el carácter
+                    return;
+                }
+
+                // Si la tecla º está presionada, procesar las teclas de acceso rápido
+                if (degreeKeyPressed) {
+                    // Teclas numéricas para cambiar de nivel
+                    if (event.key >= '1' && event.key <= '7') {
+                        var levelNumber = parseInt(event.key) - 1;
+                        if (levelNumber < LEVELS.length) {
+                            changeLevel(levelNumber);
+                        }
+                        degreeKeyPressed = false;
+                        event.preventDefault();
+                        return;
+                    }
+
+                    // Tecla 'c' para desbloquear Capa Sombria (dash)
+                    if (event.key === 'c' || event.key === 'C') {
+                        // Desbloquear la habilidad
+                        playerHasAirDash = true;
+                        // Actualizar el estado del jugador actual si existe
+                        if (currentLevelInstance && currentLevelInstance.player) {
+                            currentLevelInstance.player.canAirDash = true;
+                        }
+                        // Mostrar la pantalla de habilidad desbloqueada
+                        document.getElementById('ability-unlocked').style.display = 'flex';
+                        degreeKeyPressed = false;
+                        event.preventDefault();
+                        return;
+                    }
+
+                    // Tecla 'a' para desbloquear Alas del Monarca (doble salto)
+                    if (event.key === 'a' || event.key === 'A') {
+                        // Desbloquear la habilidad
+                        playerHasDoubleJump = true;
+                        // Actualizar el estado del jugador actual si existe
+                        if (currentLevelInstance && currentLevelInstance.player) {
+                            currentLevelInstance.player.canDoubleJump = true;
+                        }
+                        // Mostrar la pantalla de habilidad desbloqueada
+                        document.getElementById('ability-unlocked-doublejump').style.display = 'flex';
+                        degreeKeyPressed = false;
+                        event.preventDefault();
+                        return;
+                    }
+                }
+                
+                // Controles del juego
+                if (event.key === 'a' || event.key === 'A' || event.key === 'ArrowLeft') {
+                    pressedKeys.left = true;
+                }
+                if (event.key === 'd' || event.key === 'D' || event.key === 'ArrowRight') {
+                    pressedKeys.right = true;
+                }
+                if (event.key === 'w' || event.key === 'W' || event.key === 'ArrowUp' || event.key === ' ') {
+                    pressedKeys.up = true;
+                    pressedKeys.space = true;
+                }
+                // Tecla para el dash
+                if (event.key === 'm' || event.key === 'M' || event.key === 'ArrowDown') {
+                    pressedKeys.down = true;
+                }
+                
+                // Teclas 1-4 para cambiar niveles (no permitir tecla 5)
+                if (event.key >= '1' && event.key <= '4') {
+                    var levelNumber = parseInt(event.key) - 1;
+                    if (levelNumber < LEVELS.length - 1) { // Solo permitir hasta nivel 4
+                        changeLevel(levelNumber);
+                    }
+                }
+                
+                // Nuevo: Control+Mayús+Numero para saltar a cualquier nivel (1-7)
+                if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key >= '1' && event.key <= '7') {
+                    var levelNumber = parseInt(event.key) - 1;
+                    if (levelNumber < LEVELS.length) {
+                        changeLevel(levelNumber);
+                    }
+                }
+            });
+            
+            document.addEventListener('keyup', function(event) {
+                if (event.key === 'º' || event.key === '°' || event.code === 'Backquote' || event.keyCode === 192) {
+                    degreeKeyPressed = false;
+                    event.preventDefault();
+                }
+
+                if (event.key === 'a' || event.key === 'A' || event.key === 'ArrowLeft') {
+                    pressedKeys.left = false;
+                }
+                if (event.key === 'd' || event.key === 'D' || event.key === 'ArrowRight') {
+                    pressedKeys.right = false;
+                }
+                if (event.key === 'w' || event.key === 'W' || event.key === 'ArrowUp' || event.key === ' ') {
+                    pressedKeys.up = false;
+                    pressedKeys.space = false;
+                }
+                // Tecla para el dash
+                if (event.key === 'm' || event.key === 'M' || event.key === 'ArrowDown') {
+                    pressedKeys.down = false;
+                }
+            });
+            
+            // Configurar controles táctiles
+            if (isTouchDevice) {
+                document.getElementById('left-btn').addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    touchControlsState.left = true;
+                });
+                
+                document.getElementById('left-btn').addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    touchControlsState.left = false;
+                });
+                
+                document.getElementById('right-btn').addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    touchControlsState.right = true;
+                });
+                
+                document.getElementById('right-btn').addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    touchControlsState.right = false;
+                });
+                
+                document.getElementById('jump-btn').addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    touchControlsState.space = true;
+                });
+                
+                document.getElementById('jump-btn').addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    touchControlsState.space = false;
+                });
+                
+                // Control para el dash táctil
+                document.getElementById('dash-btn').addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    touchControlsState.dash = true;
+                });
+                
+                document.getElementById('dash-btn').addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    touchControlsState.dash = false;
+                });
+            }
+            
+            // Clase Vector para manejar posiciones y movimientos
+            function Vector(x, y) {
+                this.x = x;
+                this.y = y;
+            }
+
+            Vector.prototype.plus = function (other) {
+                return new Vector(this.x + other.x, this.y + other.y);
+            };
+
+            Vector.prototype.times = function (scale) {
+                return new Vector(this.x * scale, this.y * scale);
+            };
+
+            // Definición de tipos de actores
+            var actorchars = {
+                '@': Player,
+                'o': Coin,
+                '=': Lava,
+                '|': Lava,
+                'v': Lava,
+            };
+
+            // Definición de la clase Player
+            function Player(pos) {
+                this.pos = pos.plus(new Vector(0, -0.5));
+                this.size = new Vector(0.8, 1.7);
+                this.pos = pos.plus(new Vector(0, -(this.size.y - 1))); // Ajuste dinámico para no atravesar el suelo
+                this.speed = new Vector(0, 0);
+                this.facing = 'right'; // Dirección a la que mira el jugador
+                this.walkFrame = 0; // Frame actual de la animación de caminar
+                this.walkTimer = 0; // Temporizador para la animación de caminar
+                this.isJumping = false; // Si está saltando
+                this.isDashing = false; // Si está haciendo dash
+                this.dashCooldown = 0; // Tiempo de espera para el próximo dash
+                this.dashDuration = 0; // Duración restante del dash actual
+                this.canAirDash = playerHasAirDash; // Si puede hacer dash aéreo
+                this.hasDashed = false; // Si ya usó el dash en este salto o en el suelo
+                this.dashPressed = false; // Si se presionó dash en este frame
+                this.prevDashKey = false; // Estado anterior de la tecla de dash
+                this.dashProgress = 0; // Progreso del dash (0 a 3 casillas)
+                this.dashStartPos = null; // Posición inicial del dash
+                this.dashTargetPos = null; // Posición objetivo del dash
+                
+                // Nueva lógica para el doble salto
+                this.canDoubleJump = playerHasDoubleJump; // Si puede hacer doble salto
+                this.hasDoubleJumped = false; // Si ya usó el doble salto en este salto
+                this.isDoubleJumping = false; // Si está en estado de doble salto
+                this.doubleJumpTimer = 0; // Temporizador para la imagen del doble salto
+                
+                // TAMAÑOS ESPECIALES
+                this.dashSize = new Vector(1.7, 1.6); // Tamaño para el dash
+                this.doubleJumpSize = new Vector(2.2, 1.6); // Tamaño personalizable para el doble salto
+            }
+
+            Player.prototype.type = 'player';
+
+            // Método para obtener el tamaño actual según el estado
+            Player.prototype.getCurrentSize = function() {
+                if (this.isDashing) {
+                    return this.dashSize; // Tamaño especial para el dash
+                } else if (this.isDoubleJumping) {
+                    return this.doubleJumpSize; // Tamaño especial para el doble salto
+                } else {
+                    return this.size; // Tamaño normal para otros estados
+                }
+            };
+
+            // Definición de la clase Lava
+            function Lava(pos, ch) {
+                this.pos = pos;
+                this.size = new Vector(1, 1);
+                if (ch === '=') this.speed = new Vector(2, 0);
+                else if (ch === '|') this.speed = new Vector(0, 2);
+                else if (ch === 'v') {
+                    this.speed = new Vector(0, 3);
+                    this.repeatPos = pos;
+                }
+            }
+            Lava.prototype.type = 'lava';
+
+            // Definición de la clase Coin
+            function Coin(pos) {
+                this.basePos = this.pos = pos.plus(new Vector(0.2, 0.1));
+                this.size = new Vector(0.6, 0.6);
+                this.wobble = Math.random() * Math.PI * 2;
+            }
+            Coin.prototype.type = 'coin';
+
+            // Definición de la clase Level
+            function Level(plan) {
+                this.width = plan[0].length;
+                this.height = plan.length;
+                this.grid = [];
+                this.actors = [];
+
+                for (var y = 0; y < this.height; y++) {
+                    var line = plan[y],
+                        gridLine = [];
+                    for (var x = 0; x < this.width; x++) {
+                        var ch = line[x],
+                            fieldType = null;
+                        var Actor = actorchars[ch];
+                        if (Actor) this.actors.push(new Actor(new Vector(x, y), ch));
+                        else if (ch === 'x') fieldType = 'wall';
+                        else if (ch === '!') fieldType = 'lava';
+                        gridLine.push(fieldType);
+                    }
+                    this.grid.push(gridLine);
+                }
+                
+                this.player = this.actors.filter(function (actor) {
+                    return actor.type === 'player';
+                })[0];
+                
+                this.status = this.finishDelay = null;
+            }
+
+            // Verificar si el nivel está terminado
+            Level.prototype.isFinished = function () {
+                return this.status != null && this.finishDelay < 0;
+            };
+
+            // Verificar obstáculos en una posición
+            Level.prototype.obstacleAt = function (pos, size) {
+                var xStart = Math.floor(pos.x);
+                var xEnd = Math.ceil(pos.x + size.x);
+                var yStart = Math.floor(pos.y);
+                var yEnd = Math.ceil(pos.y + size.y);
+
+                if (xStart < 0 || xEnd > this.width || yStart < 0) return 'wall';
+                if (yEnd > this.height) return 'lava';
+                
+                for (var y = yStart; y < yEnd; y++) {
+                    for (var x = xStart; x < xEnd; x++) {
+                        var fieldType = this.grid[y][x];
+                        if (fieldType) return fieldType;
+                    }
+                }
+            };
+
+            // Verificar colisión con otros actores
+            Level.prototype.actorAt = function (actor) {
+                for (var i = 0; i < this.actors.length; i++) {
+                    var other = this.actors[i];
+                    if (other != actor &&
+                        actor.pos.x + actor.size.x > other.pos.x &&
+                        actor.pos.x < other.pos.x + other.size.x &&
+                        actor.pos.y + actor.size.y > other.pos.y &&
+                        actor.pos.y < other.pos.y + other.size.y)
+                        return other;
+                }
+            };
+
+            // Animar el nivel
+            Level.prototype.animate = function (step, keys) {
+                if (this.status != null) this.finishDelay -= step;
+
+                while (step > 0) {
+                    var thisStep = Math.min(step, 0.05);
+                    this.actors.forEach(function (actor) {
+                        actor.act(thisStep, this, keys);
+                    }, this);
+                    step -= thisStep;
+                }
+            };
+
+            // Manejar toques del jugador
+            Level.prototype.playerTouched = function (type, actor) {
+                if (type == 'lava' && this.status == null) {
+                    this.status = 'lost';
+                    this.finishDelay = 1;
+                } else if (type == 'coin') {
+                    this.actors = this.actors.filter(function (other) {
+                        return other != actor;
+                    });
+                    if (!this.actors.some(function (actor) {
+                        return actor.type == 'coin';
+                    })) {
+                        this.status = 'won';
+                        this.finishDelay = 1;
+                    }
+                }
+            };
+
+            // Comportamiento de Lava
+            Lava.prototype.act = function (step, level) {
+                var newPos = this.pos.plus(this.speed.times(step));
+                if (!level.obstacleAt(newPos, this.size)) this.pos = newPos;
+                else if (this.repeatPos) this.pos = this.repeatPos;
+                else this.speed = this.speed.times(-1);
+            };
+
+            // Comportamiento de Coin
+            var wobbleSpeed = 8,
+                wobbleDist = 0.07;
+            
+            Coin.prototype.act = function (step) {
+                this.wobble += step * wobbleSpeed;
+                var wobblePos = Math.sin(this.wobble) * wobbleDist;
+                this.pos = this.basePos.plus(new Vector(0, wobblePos));
+            };
+
+            // Movimiento horizontal del jugador
+            var playerXSpeed = 7;
+            var dashSpeed = 20; // Velocidad muy alta para el dash
+            var dashDuration = 0.15; // Duración muy corta para el dash
+            
+            Player.prototype.moveX = function (step, level, keys) {
+                this.speed.x = 0;
+                var wasMoving = keys.left || keys.right;
+                
+                // Detectar si se acaba de presionar dash
+                this.dashPressed = (keys.down || keys.dash) && !this.prevDashKey;
+                this.prevDashKey = keys.down || keys.dash;
+                
+                // Manejar dash (ahora funciona tanto en suelo como en aire)
+                if (this.canAirDash && !this.hasDashed && this.dashPressed && !this.isDashing) {
+                    this.isDashing = true;
+                    this.dashDuration = dashDuration;
+                    this.hasDashed = true;
+                    this.dashProgress = 0;
+                    this.dashStartPos = new Vector(this.pos.x, this.pos.y);
+                    
+                    // Calcular la posición objetivo (3 casillas en la dirección que mira)
+                    var direction = this.facing === 'left' ? -1 : 1;
+                    this.dashTargetPos = this.pos.plus(new Vector(3 * direction, 0));
+                    
+                    // Verificar si hay obstáculos en el camino
+                    for (var i = 1; i <= 3; i++) {
+                        var checkPos = this.pos.plus(new Vector(i * direction, 0));
+                        if (level.obstacleAt(checkPos, this.size)) {
+                            // Si hay obstáculo, ajustar la posición objetivo
+                            this.dashTargetPos = this.pos.plus(new Vector((i - 0.5) * direction, 0));
+                            break;
+                        }
+                    }
+                }
+                
+                // Actualizar cooldown del dash
+                if (this.dashCooldown > 0) {
+                    this.dashCooldown -= step;
+                }
+                
+                // Si está en dash, aplicar movimiento de dash
+                if (this.isDashing) {
+                    this.dashDuration -= step;
+                    
+                    // Mover hacia la posición objetivo durante el dash
+                    var dashDirection = this.dashTargetPos.x > this.pos.x ? 1 : -1;
+                    var dashDistance = dashSpeed * step;
+                    
+                    // Calcular nueva posición
+                    var newX = this.pos.x + (dashDistance * dashDirection);
+                    
+                    // Limitar al objetivo
+                    if ((dashDirection > 0 && newX > this.dashTargetPos.x) || 
+                        (dashDirection < 0 && newX < this.dashTargetPos.x)) {
+                        newX = this.dashTargetPos.x;
+                    }
+                    
+                    var newPos = new Vector(newX, this.pos.y);
+                    var obstacle = level.obstacleAt(newPos, this.size);
+                    
+                    if (!obstacle) {
+                        this.pos = newPos;
+                    } else {
+                        // Si hay obstáculo, detener el dash
+                        this.isDashing = false;
+                    }
+                    
+                    // Si se acabó el tiempo de dash o llegó al objetivo, terminar el dash
+                    if (this.dashDuration <= 0 || 
+                        (dashDirection > 0 && this.pos.x >= this.dashTargetPos.x) ||
+                        (dashDirection < 0 && this.pos.x <= this.dashTargetPos.x)) {
+                        this.isDashing = false;
+                    }
+                } else {
+                    // Movimiento normal
+                    var currentSpeed = playerXSpeed;
+                    
+                    if (keys.left) {
+                        this.speed.x -= currentSpeed;
+                        this.facing = 'left';
+                    }
+                    if (keys.right) {
+                        this.speed.x += currentSpeed;
+                        this.facing = 'right';
+                    }
+
+                    var motion = new Vector(this.speed.x * step, 0);
+                    var newPos = this.pos.plus(motion);
+                    var obstacle = level.obstacleAt(newPos, this.size);
+                    if (obstacle) level.playerTouched(obstacle);
+                    else this.pos = newPos;
+                }
+                
+                // Animación de caminar (solo si no está en dash)
+                if (wasMoving && !this.isDashing) {
+                    this.walkTimer += step;
+                    if (this.walkTimer > 0.15) { // Cambiar frame cada 0.15 segundos
+                        this.walkTimer = 0;
+                        this.walkFrame = this.walkFrame === 0 ? 1 : 0;
+                    }
+                } else {
+                    this.walkTimer = 0;
+                    this.walkFrame = 0;
+                }
+            };
+
+            // Movimiento vertical y gravedad
+            var gravity = 30;
+            var jumpSpeed = 17;
+            
+            Player.prototype.moveY = function (step, level, keys) {
+                // Si está en dash, no aplicar gravedad
+                if (this.isDashing) {
+                    // Durante el dash, mantener la altura actual
+                    this.speed.y = 0;
+                } else {
+                    // Aplicar gravedad normal
+                    this.speed.y += step * gravity;
+                }
+                
+                var motion = new Vector(0, this.speed.y * step);
+                var newPos = this.pos.plus(motion);
+                var obstacle = level.obstacleAt(newPos, this.size);
+
+                if (obstacle) {
+                    level.playerTouched(obstacle);
+
+                    // Si está en el suelo y presiona salto
+                    if ((keys.up || keys.space) && this.speed.y >= 0) {
+                        this.speed.y = -jumpSpeed;
+                        this.isJumping = true;   // Activar salto
+                        this.hasDashed = false; // Resetear el dash al tocar el suelo
+                        this.hasDoubleJumped = false; // Resetear el doble salto al tocar el suelo
+                    } else {
+                        this.speed.y = 0;
+                        this.isJumping = false;  // En el suelo
+                        this.hasDashed = false; // Resetear el dash al tocar el suelo
+                        this.hasDoubleJumped = false; // Resetear el doble salto al tocar el suelo
+                    }
+                } else {
+                    this.pos = newPos;
+                    this.isJumping = true; // En el aire
+                    
+                    // Lógica del doble salto
+                    if (this.canDoubleJump && !this.hasDoubleJumped && (keys.up || keys.space) && this.speed.y > 0) {
+                        this.speed.y = -jumpSpeed * 0.9; // Un poco menos de fuerza que el salto normal
+                        this.hasDoubleJumped = true;
+                        this.isDoubleJumping = true;
+                        this.doubleJumpTimer = 0.3; // 0.3 segundos para la animación
+                    }
+                }
+            };
+
+            // Acciones del jugador
+            Player.prototype.act = function (step, level, keys) {
+                this.moveX(step, level, keys);
+                this.moveY(step, level, keys);
+                
+                // Actualizar temporizador del doble salto
+                if (this.isDoubleJumping) {
+                    this.doubleJumpTimer -= step;
+                    if (this.doubleJumpTimer <= 0) {
+                        this.isDoubleJumping = false;
+                    }
+                }
+
+                var otherActor = level.actorAt(this);
+                if (otherActor) level.playerTouched(otherActor.type, otherActor);
+
+                // Animación de perder
+                if (level.status == 'lost') {
+                    this.pos.y += step;
+                    this._isDying = true; // flag de animación de muerte
+                }
+            };
+
+            // Obtener la imagen actual del jugador según su estado
+            Player.prototype.getCurrentImage = function() {
+                if (this.isDoubleJumping) {
+                    return playerImages.doubleJump;
+                } else if (this.isDashing) {
+                    return playerImages.dash;
+                } else if (this.isJumping) {
+                    return playerImages.jump;
+                } else if (this.speed.x !== 0) {
+                    return this.walkFrame === 0 ? playerImages.walk1 : playerImages.walk2;
+                } else {
+                    return playerImages.idle;
+                }
+            };
+
+            // Helper para crear elementos DOM
+            function element(name, className) {
+                var elem = document.createElement(name);
+                if (className) elem.className = className;
+                return elem;
+            }
+
+            // Display del juego en DOM
+            function DOMDisplay(parent, level) {
+                this.wrap = parent.appendChild(element('div', 'game'));
+                this.level = level;
+                
+                // Hacer el contenedor del juego del tamaño del nivel
+                this.wrap.style.width = (level.width * scale) + 'px';
+                this.wrap.style.height = (level.height * scale) + 'px';
+                this.wrap.style.position = 'absolute';
+                this.wrap.style.top = '0';
+                this.wrap.style.left = '0';
+                
+                this.wrap.appendChild(this.drawBackground());
+                this.actorLayer = null;
+                this.drawFrame();
+            }
+
+            // Escala aumentada para hacer todo más grande
+            var scale = 25;
+
+            // Dibujar el fondo
+            DOMDisplay.prototype.drawBackground = function () {
+                var table = element('table', 'background');
+                table.style.width = this.level.width * scale + 'px';
+                table.style.height = this.level.height * scale + 'px';
+                
+                for (var y = 0; y < this.level.height; y++) {
+                    var rowElement = table.appendChild(element('tr'));
+                    rowElement.style.height = scale + 'px';
+                    
+                    for (var x = 0; x < this.level.width; x++) {
+                        var cell = element('td');
+                        var fieldType = this.level.grid[y][x];
+                        if (fieldType) cell.className = fieldType;
+                        cell.style.width = scale + 'px';
+                        cell.style.height = scale + 'px';
+                        rowElement.appendChild(cell);
+                    }
+                }
+                return table;
+            };
+
+            // Dibujar los actores
+            DOMDisplay.prototype.drawActors = function () {
+                var wrap = element('div');
+                wrap.style.position = 'absolute';
+                wrap.style.top = '0';
+                wrap.style.left = '0';
+                wrap.style.width = (this.level.width * scale) + 'px';
+                wrap.style.height = (this.level.height * scale) + 'px';
+                
+                for (var i = 0; i < this.level.actors.length; i++) {
+                    var actor = this.level.actors[i];
+                    
+                    // Usar el tamaño correcto según el estado
+                    var currentSize = actor.type === 'player' && actor.getCurrentSize ? 
+                                     actor.getCurrentSize() : actor.size;
+                    
+                    var rect = element('div', 'actor ' + actor.type);
+                    rect.style.width = currentSize.x * scale + 'px';  // Usar currentSize
+                    rect.style.height = currentSize.y * scale + 'px'; // Usar currentSize
+                    rect.style.left = actor.pos.x * scale + 'px';
+                    
+                    // Ajustar la posición vertical para que el cambio de tamaño sea desde los pies
+                    var verticalOffset = (actor.size.y - currentSize.y) * scale;
+                    rect.style.top = (actor.pos.y * scale + verticalOffset) + 'px';
+                    
+                    rect.style.position = 'absolute';
+                    
+                    // Si es el jugador, aplicar la imagen y efectos correspondientes
+                    if (actor.type === 'player') {
+                        if (imageLoaded) {
+                            rect.style.backgroundImage = "url('" + actor.getCurrentImage().src + "')";
+                            rect.style.backgroundSize = "cover";
+                            rect.style.backgroundRepeat = "no-repeat";
+                            rect.style.backgroundPosition = "center";
+                            rect.style.backgroundColor = "transparent";
+
+                            // Aplicar efecto espejo si mira a la izquierda
+                            if (actor.facing === 'left') {
+                                rect.style.transform = "scaleX(-1)";
+                            } else {
+                                rect.style.transform = "scaleX(1)";
+                            }
+                        }
+                    }
+                    
+                    wrap.appendChild(rect);
+                }
+                return wrap;
+            };
+
+            // Dibujar un frame
+            DOMDisplay.prototype.drawFrame = function () {
+                if (this.actorLayer) this.wrap.removeChild(this.actorLayer);
+                this.actorLayer = this.wrap.appendChild(this.drawActors());
+                this.wrap.className = 'game ' + (this.level.status || '');
+                this.scrollPlayerIntoView();
+            };
+
+            // Ajustar scroll para mantener al jugador visible (horizontal y vertical)
+            DOMDisplay.prototype.scrollPlayerIntoView = function () {
+                var container = this.wrap.parentNode;
+                var player = this.level.player;
+                var center = player.pos.plus(player.size.times(0.5)).times(scale);
+                
+                // Calcular la posición para el scroll
+                var targetScrollLeft = center.x - (container.clientWidth / 2);
+                var targetScrollTop = center.y - (container.clientHeight / 2);
+                
+                // Limitar el scroll para no salirse de los bordes
+                targetScrollLeft = Math.max(0, Math.min(targetScrollLeft, this.level.width * scale - container.clientWidth));
+                targetScrollTop = Math.max(0, Math.min(targetScrollTop, this.level.height * scale - container.clientHeight));
+                
+                // Aplicar el scroll
+                container.scrollLeft = targetScrollLeft;
+                container.scrollTop = targetScrollTop;
+            };
+
+            // Limpiar el display
+            DOMDisplay.prototype.clear = function () {
+                this.wrap.parentNode.removeChild(this.wrap);
+            };
+
+            // Ejecutar animación
+            function runAnimation(frameFunc) {
+                var lastTime = null;
+                
+                function frame(time) {
+                    var stop = false;
+                    if (lastTime != null) {
+                        var timeStep = Math.min(time - lastTime, 100) / 1000;
+                        stop = frameFunc(timeStep) === false;
+                    }
+                    lastTime = time;
+                    if (!stop) requestAnimationFrame(frame);
+                }
+                requestAnimationFrame(frame);
+            }
+
+            // Ejecutar un nivel
+            function runLevel(level, Display, andThen) {
+                var display = new Display(document.getElementById('game-container'), level);
+                currentDisplay = display;
+                
+                runAnimation(function (step) {
+                    // Combinar controles de teclado y táctiles
+                    var combinedKeys = {
+                        left: pressedKeys.left || touchControlsState.left,
+                        right: pressedKeys.right || touchControlsState.right,
+                        up: pressedKeys.up || touchControlsState.space,
+                        space: pressedKeys.space || touchControlsState.space,
+                        down: pressedKeys.down, // Tecla para dash
+                        dash: touchControlsState.dash // Control táctil para dash
+                    };
+                    
+                    level.animate(step, combinedKeys);
+                    display.drawFrame(step);
+                    
+                    if (level.isFinished()) {
+                        display.clear();
+                        if (andThen) andThen(level.status);
+                        return false;
+                    }
+                });
+            }
+
+            // Función para cambiar de nivel
+            function changeLevel(newLevel) {
+                if (newLevel >= 0 && newLevel < LEVELS.length) {
+                    currentLevel = newLevel;
+                    
+                    // Mostrar notificación de cambio de nivel
+                    var notification = document.getElementById('level-notification');
+                    notification.textContent = "Nivel " + (currentLevel + 1);
+                    notification.style.opacity = '1';
+                    
+                    setTimeout(function() {
+                        notification.style.opacity = '0';
+                    }, 1500);
+                    
+                    // Actualizar información del nivel
+                    document.getElementById('level-info').textContent = "Nivel " + (currentLevel + 1);
+                    
+                    // Limpiar el nivel actual de forma más robusta
+                    if (currentDisplay) {
+                        try {
+                            currentDisplay.clear();
+                        } catch (e) {
+                            console.log("Error limpiando display anterior:", e);
+                            // Si hay error, limpiar manualmente el contenedor
+                            var gameContainer = document.getElementById('game-container');
+                            while (gameContainer.firstChild) {
+                                if (gameContainer.firstChild.id !== 'level-info' && 
+                                    gameContainer.firstChild.id !== 'instructions' && 
+                                    gameContainer.firstChild.id !== 'loading' && 
+                                    gameContainer.firstChild.id !== 'fullscreen-btn' && 
+                                    gameContainer.firstChild.id !== 'touch-controls' && 
+                                    gameContainer.firstChild.id !== 'touch-indicator') {
+                                    gameContainer.removeChild(gameContainer.firstChild);
+                                } else {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Iniciar el nuevo nivel
+                    currentLevelInstance = new Level(LEVELS[currentLevel]);
+                    runLevel(currentLevelInstance, DOMDisplay, function (status) {
+                        if (status == 'lost') {
+                            setTimeout(function() {
+                                changeLevel(currentLevel);
+                            }, 1000);
+                        } else if (currentLevel < LEVELS.length - 1) {
+                            // Si completamos el nivel 4, mostrar pantalla de habilidad de dash
+                            if (currentLevel === 3) {
+                                document.getElementById('ability-unlocked').style.display = 'flex';
+                            } 
+                            // Si completamos el nivel 6, mostrar pantalla de habilidad de doble salto
+                            else if (currentLevel === 5) {
+                                document.getElementById('ability-unlocked-doublejump').style.display = 'flex';
+                            } else {
+                                setTimeout(function() {
+                                    changeLevel(currentLevel + 1);
+                                }, 1000);
+                            }
+                        } else {
+                            document.getElementById('level-info').textContent = '¡Has ganado!';
+                        }
+                    });
+                }
+            }
+
+            // Iniciar el juego
+            gameRunning = true;
+            currentLevelInstance = new Level(LEVELS[currentLevel]);
+            runLevel(currentLevelInstance, DOMDisplay, function (status) {
+                if (status == 'lost') {
+                    setTimeout(function() {
+                        changeLevel(currentLevel);
+                    }, 1000);
+                } else if (currentLevel < LEVELS.length - 1) {
+                    // Si completamos el nivel 4, mostrar pantalla de habilidad de dash
+                    if (currentLevel === 3) {
+                        document.getElementById('ability-unlocked').style.display = 'flex';
+                    } 
+                    // Si completamos el nivel 6, mostrar pantalla de habilidad de doble salto
+                    else if (currentLevel === 5) {
+                        document.getElementById('ability-unlocked-doublejump').style.display = 'flex';
+                    } else {
+                        setTimeout(function() {
+                            changeLevel(currentLevel + 1);
+                        }, 1000);
+                    }
+                } else {
+                    document.getElementById('level-info').textContent = '¡Has ganado!';
+                }
+            });
+            
+            // Ocultar instrucciones después de 5 segundos
+            setTimeout(function() {
+                document.getElementById('instructions').style.opacity = '0.3';
+            }, 5000);
+        }
+
+        // Si las imágenes no se cargan, iniciar el juego de todos modos después de un tiempo
+        setTimeout(function() {
+            if (!imageLoaded) {
+                console.warn("No se pudieron cargar todas las imágenes, iniciando juego sin ellas");
+                document.getElementById('loading').style.display = 'none';
+                initGame();
+            }
+        }, 3000);
+    </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log("SW registrado:", reg))
+          .catch(err => console.error("Error SW:", err));
+      });
+    }
+  </script>
+    
+</body>
+</html>        }
+        
+        .lava, .actor {
+            background: #e55;
+        }
+        
+        .wall {
+            background: #444;
+            border: solid 3px #333;
+            box-sizing: border-box;
+        }
+        
+        .actor {
+            position: absolute;
+        }
+        
+        .coin {
+            background: #e2e838;
+            border-radius: 50%;
+            box-shadow: 0 0 8px yellow;
+        }
+        
+        .player {
+            background: transparent;
+            box-shadow: none;
+            border-radius: 3px;
+            background-size: cover;
+            background-position: center;
+            transition: transform 0.1s;
+        }
+        
+        .lost .player {
+            background: #a04040;
+            background-image: none !important;
+        }
+        
+        .won .player {
+            background: green;
+            background-image: none !important;
+        }
+        
+        .game {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #instructions {
+            position: fixed;
+            bottom: 15px;
+            left: 15px;
+            color: #fff;
+            font-family: monospace;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 12px;
+            border-radius: 5px;
+            z-index: 100;
+            transition: opacity 1s;
+        }
+        
+        #level-info {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            color: #fff;
+            font-family: monospace;
+            font-size: 16px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 8px 12px;
+            border-radius: 5px;
+            z-index: 100;
+        }
+        
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 20px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 25px;
+            border-radius: 10px;
+        }
+        
+        /* Controles táctiles */
+        #touch-controls {
+            position: fixed;
+            bottom: 20px;
+            width: 100%;
+            display: none;
+            justify-content: space-between;
+            padding: 0 25px;
+            z-index: 100;
+            box-sizing: border-box;
+        }
+        
+        .touch-section {
+            display: flex;
+            gap: 25px;
+        }
+        
+        .touch-btn {
+            width: 70px;
+            height: 70px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: white;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+        
+        .touch-btn:active {
+            background: rgba(255, 255, 255, 0.5);
+        }
+        
+        #jump-btn {
+            background: rgba(255, 100, 100, 0.5);
+        }
+        
+        #jump-btn:active {
+            background: rgba(255, 100, 100, 0.7);
+        }
+        
+        /* Nuevo botón de dash */
+        #dash-btn {
+            background: rgba(100, 255, 100, 0.5);
+        }
+        
+        #dash-btn:active {
+            background: rgba(100, 255, 100, 0.7);
+        }
+        
+        /* Indicador de que es un juego táctil */
+        .touch-indicator {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 18px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 25px;
+            border-radius: 10px;
+            z-index: 1000;
+            text-align: center;
+        }
+        
+        /* Modo pantalla completa */
+        #fullscreen-btn {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            padding: 6px 12px;
+            cursor: pointer;
+            z-index: 100;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        #fullscreen-btn:hover {
+            background: rgba(0, 0, 0, 0.7);
+        }
+        
+        /* Notificación de cambio de nivel - MODIFICADO para pantalla completa */
+        #level-notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 30px;
+            border-radius: 10px;
+            z-index: 10000; /* Aumentado para pantalla completa */
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+        
+        /* Pantalla de habilidad desbloqueada */
+        #ability-unlocked {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 10000;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        #ability-unlocked h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #ffcc00;
+        }
+        
+        #ability-unlocked h2 {
+            font-size: 28px;
+            margin-bottom: 30px;
+            color: #ff6600;
+        }
+        
+        #ability-image {
+            width: 150px;
+            height: 150px;
+            margin-bottom: 30px;
+            border: 3px solid #ffcc00;
+            border-radius: 10px;
+        }
+        
+        #ability-description {
+            font-size: 18px;
+            max-width: 600px;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+        
+        #continue-button {
+            background: #ff6600;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 18px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        #continue-button:hover {
+            background: #ff8800;
+        }
     </style>
 </head>
 <body>
